@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZeroTrade</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #f8fafc;
+    }
+
+    .header p {
+      margin-top: 6px;
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .card {
+      background: #1e2330;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 620px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    textarea {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 14px;
+      resize: vertical;
+      min-height: 110px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: #3b82f6;
+    }
+
+    textarea::placeholder {
+      color: #4a5568;
+    }
+
+    .examples {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      background: #1a2235;
+      border: 1px solid #2d3748;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .chip:hover {
+      border-color: #3b82f6;
+      color: #93c5fd;
+    }
+
+    .mode-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #2d3748;
+      background: #0f1117;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active {
+      background: #1d3a5f;
+      border-color: #3b82f6;
+      color: #60a5fa;
+    }
+
+    .submit-btn {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s;
+    }
+
+    .submit-btn:hover { background: #1d4ed8; }
+    .submit-btn:disabled { background: #1e3a5f; color: #4a6fa5; cursor: not-allowed; }
+
+    /* Result panel */
+    .result {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .result.show { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .badge.success { background: #064e3b; color: #34d399; }
+    .badge.error   { background: #450a0a; color: #f87171; }
+    .badge.parsed  { background: #1e1b4b; color: #a78bfa; }
+
+    .trade-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .trade-item {
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .trade-item .t-label {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .trade-item .t-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .trade-item .t-value.buy  { color: #34d399; }
+    .trade-item .t-value.sell { color: #f87171; }
+    .trade-item .t-value.sl   { color: #fbbf24; }
+    .trade-item .t-value.tgt  { color: #60a5fa; }
+
+    .order-result {
+      margin-top: 14px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .order-result span { color: #f1f5f9; font-weight: 600; }
+
+    .error-box {
+      background: #1a0a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 13px;
+      color: #fca5a5;
+      line-height: 1.6;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffffff33;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .raw-tip {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #4a5568;
+      font-style: italic;
+    }
+
+    /* Auth status bar */
+    .auth-bar {
+      width: 100%;
+      max-width: 620px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1e2330;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .auth-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .auth-dot.green { background: #34d399; box-shadow: 0 0 6px #34d399; }
+    .auth-dot.red   { background: #f87171; }
+
+    .auth-text { color: #94a3b8; flex: 1; }
+    .auth-text span { color: #e2e8f0; font-weight: 600; }
+
+    .login-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #3b82f6;
+      background: transparent;
+      color: #60a5fa;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+
+    .login-btn:hover { background: #1d3a5f; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>ZeroTrade</h1>
+    <p>Paste a trading tip — LLM parses it — Zerodha executes it</p>
+  </div>
+
+  <!-- Auth status bar -->
+  <div class="auth-bar" id="authBar">
+    <span class="auth-dot red" id="authDot"></span>
+    <span class="auth-text" id="authText">Checking auth status...</span>
+    <a class="login-btn" href="/auth/login" id="loginBtn">Login with Zerodha</a>
+  </div>
+
+  <div class="card">
+    <label>Trading Tip</label>
+    <textarea id="tipText" placeholder="e.g. Buy RELIANCE above 2450, SL 2420, target 2500"></textarea>
+
+    <div class="examples">
+      <span class="chip" onclick="fillExample('Buy RELIANCE above 2450, SL 2420, target 2500')">RELIANCE BUY</span>
+      <span class="chip" onclick="fillExample('SELL INFY 1800 SL 1820 TGT 1750 qty 10')">INFY SELL</span>
+      <span class="chip" onclick="fillExample('BUY TATAMOTORS CMP 950 SL 930 T1 980 T2 1000')">TATAMOTORS BUY</span>
+      <span class="chip" onclick="fillExample('Short HDFCBANK below 1650 SL 1670 target 1610')">HDFCBANK SHORT</span>
+    </div>
+
+    <div class="mode-row">
+      <button class="mode-btn active" id="btn-parse" onclick="setMode('parse')">Parse Only</button>
+      <button class="mode-btn" id="btn-execute" onclick="setMode('execute')">Parse + Execute</button>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submit()">Analyse Tip</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    let mode = 'parse';
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btn-parse').classList.toggle('active', m === 'parse');
+      document.getElementById('btn-execute').classList.toggle('active', m === 'execute');
+      document.getElementById('submitBtn').textContent =
+        m === 'parse' ? 'Analyse Tip' : 'Analyse + Place Order';
+    }
+
+    function fillExample(text) {
+      document.getElementById('tipText').value = text;
+      document.getElementById('result').classList.remove('show');
+    }
+
+    async function submit() {
+      const tip = document.getElementById('tipText').value.trim();
+      if (!tip) return;
+
+      const btn = document.getElementById('submitBtn');
+      const resultEl = document.getElementById('result');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Processing...';
+      resultEl.classList.remove('show');
+
+      const endpoint = mode === 'parse'
+        ? '/api/trade/parse-only'
+        : '/api/trade/parse-and-execute';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipText: tip })
+        });
+
+        const data = await res.json();
+        resultEl.innerHTML = mode === 'parse'
+          ? renderParsed(data, tip)
+          : renderExecuted(data, res.ok);
+        resultEl.classList.add('show');
+
+      } catch (e) {
+        resultEl.innerHTML = `
+          <div class="result-header"><span class="badge error">Error</span></div>
+          <div class="error-box">Could not reach the server. Is the app running?</div>`;
+        resultEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = mode === 'parse' ? 'Analyse Tip' : 'Analyse + Place Order';
+      }
+    }
+
+    function renderParsed(t, rawTip) {
+      if (!t.symbol) {
+        return `
+          <div class="result-header"><span class="badge error">Parse Failed</span></div>
+          <div class="error-box">${t.errorMessage || 'Could not extract trade details from the tip.'}</div>`;
+      }
+      return `
+        <div class="result-header"><span class="badge parsed">Parsed</span></div>
+        ${tradeGrid(t)}
+        <div class="raw-tip">Tip: "${rawTip}"</div>`;
+    }
+
+    function renderExecuted(data, ok) {
+      if (!ok || !data.success) {
+        return `
+          <div class="result-header"><span class="badge error">${data.orderStatus || 'Failed'}</span></div>
+          <div class="error-box">${data.errorMessage || 'Unknown error'}</div>
+          ${data.parsedTrade ? tradeGrid(data.parsedTrade) : ''}`;
+      }
+      return `
+        <div class="result-header"><span class="badge success">Order Placed</span></div>
+        ${tradeGrid(data.parsedTrade)}
+        <div class="order-result">
+          Order ID: <span>${data.orderId}</span> &nbsp;·&nbsp;
+          Status: <span>${data.orderStatus}</span>
+        </div>
+        <div class="raw-tip">Tip: "${data.parsedTrade?.rawTip || ''}"</div>`;
+    }
+
+    function tradeGrid(t) {
+      const actionClass = t.action === 'BUY' ? 'buy' : 'sell';
+      const fmt = v => v != null ? v.toLocaleString('en-IN') : '—';
+      return `
+        <div class="trade-grid">
+          <div class="trade-item">
+            <div class="t-label">Symbol</div>
+            <div class="t-value">${t.symbol || '—'}</div>
+          </div>
+          <div class="trade-item">
+            <div class="t-label">Action</div>
+            <div class="t-value ${actionClass}">${t.action || '—'}</div>
+          </div>
+          <div class="trade-item">
+            <div class="t-label">Entry Price</div>
+            <div class="t-value">₹${fmt(t.entryPrice)}</div>
+          </div>
+          <div class="trade-item">
+            <div class="t-label">Stop Loss</div>
+            <div class="t-value sl">₹${fmt(t.stopLossPrice)}</div>
+          </div>
+          <div class="trade-item">
+            <div class="t-label">Target</div>
+            <div class="t-value tgt">₹${fmt(t.targetPrice)}</div>
+          </div>
+          <div class="trade-item">
+            <div class="t-label">Qty · Order · Exchange</div>
+            <div class="t-value" style="font-size:13px">${t.quantity || '—'} · ${t.orderType || '—'} · ${t.exchange || '—'}</div>
+          </div>
+        </div>`;
+    }
+
+    document.getElementById('tipText').addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
+    });
+
+    async function checkAuthStatus() {
+      try {
+        const res = await fetch('/auth/status');
+        const data = await res.json();
+        const dot  = document.getElementById('authDot');
+        const text = document.getElementById('authText');
+        const btn  = document.getElementById('loginBtn');
+
+        if (data.tokenSet) {
+          dot.className  = 'auth-dot green';
+          const time = data.tokenSetAt ? data.tokenSetAt.substring(11, 16) : '';
+          text.innerHTML = `Zerodha connected &nbsp;·&nbsp; <span>Token set at ${time}</span> — valid till midnight`;
+          btn.textContent = 'Re-login';
+        } else {
+          dot.className  = 'auth-dot red';
+          text.innerHTML = 'Not authenticated &nbsp;·&nbsp; Login to enable order placement';
+          btn.textContent = 'Login with Zerodha';
+        }
+      } catch (_) {
+        document.getElementById('authText').textContent = 'Could not reach server';
+      }
+    }
+
+    checkAuthStatus();
+    // Recheck every 60 seconds in case user logs in from another tab
+    setInterval(checkAuthStatus, 60000);
+  </script>
+</body>
+</html>
