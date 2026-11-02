@@ -145,6 +145,75 @@
     .submit-btn:hover { background: #1d4ed8; }
     .submit-btn:disabled { background: #1e3a5f; color: #4a6fa5; cursor: not-allowed; }
 
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .qty-row label {
+      margin: 0;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .qty-input {
+      width: 100px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      text-align: center;
+    }
+
+    .qty-input:focus { border-color: #3b82f6; }
+
+    .qty-hint {
+      font-size: 12px;
+      color: #4a5568;
+    }
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .confirm-btn {
+      flex: 1;
+      padding: 13px;
+      border-radius: 8px;
+      border: none;
+      background: #059669;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .confirm-btn:hover { background: #047857; }
+    .confirm-btn:disabled { background: #1e3a2e; color: #4a7a5f; cursor: not-allowed; }
+
+    .cancel-btn {
+      flex: 0 0 120px;
+      padding: 13px;
+      border-radius: 8px;
+      border: 1px solid #4a5568;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .cancel-btn:hover { border-color: #f87171; color: #f87171; }
+
     /* Result panel */
     .result {
       margin-top: 24px;
@@ -288,9 +357,59 @@
       cursor: pointer;
       text-decoration: none;
       transition: all 0.15s;
+      margin-left: 8px;
     }
 
     .login-btn:hover { background: #1d3a5f; }
+
+    .logout-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #4a5568;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+      margin-left: 8px;
+    }
+
+    .logout-btn:hover { border-color: #f87171; color: #f87171; }
+
+    .balance-bar {
+      width: 100%;
+      max-width: 620px;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .balance-tile {
+      flex: 1;
+      background: #1e2330;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .balance-tile .b-label {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .balance-tile .b-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .balance-tile .b-value.green { color: #34d399; }
+    .balance-tile .b-value.red   { color: #f87171; }
   </style>
 </head>
 <body>
@@ -304,7 +423,22 @@
   <div class="auth-bar" id="authBar">
     <span class="auth-dot red" id="authDot"></span>
     <span class="auth-text" id="authText">Checking auth status...</span>
-    <a class="login-btn" href="/auth/login" id="loginBtn">Login with Zerodha</a>
+    <div>
+      <a class="login-btn" href="/auth/login" id="loginBtn">Connect Zerodha</a>
+      <a class="logout-btn" href="/logout">Sign out</a>
+    </div>
+  </div>
+
+  <!-- Balance bar -->
+  <div class="balance-bar" id="balanceBar" style="display:none">
+    <div class="balance-tile">
+      <div class="b-label">Available Balance</div>
+      <div class="b-value green" id="balAvailable">—</div>
+    </div>
+    <div class="balance-tile">
+      <div class="b-label">Margin Used</div>
+      <div class="b-value red" id="balUsed">—</div>
+    </div>
   </div>
 
   <div class="card">
@@ -316,35 +450,44 @@
       <span class="chip" onclick="fillExample('SELL INFY 1800 SL 1820 TGT 1750 qty 10')">INFY SELL</span>
       <span class="chip" onclick="fillExample('BUY TATAMOTORS CMP 950 SL 930 T1 980 T2 1000')">TATAMOTORS BUY</span>
       <span class="chip" onclick="fillExample('Short HDFCBANK below 1650 SL 1670 target 1610')">HDFCBANK SHORT</span>
+      <span class="chip" onclick="fillExample('Buy ZYDUS LIFESCIENCES above 1248, SL 1240, target 1340, swing trade')">ZYDUS SWING (CNC)</span>
     </div>
 
-    <div class="mode-row">
-      <button class="mode-btn active" id="btn-parse" onclick="setMode('parse')">Parse Only</button>
-      <button class="mode-btn" id="btn-execute" onclick="setMode('execute')">Parse + Execute</button>
+    <div class="qty-row">
+      <label>Quantity</label>
+      <input class="qty-input" id="quantity" type="number" min="1" step="1" value="1"/>
+      <span class="qty-hint">overrides qty in tip text</span>
     </div>
 
-    <button class="submit-btn" id="submitBtn" onclick="submit()">Analyse Tip</button>
+    <button class="submit-btn" id="submitBtn" onclick="analyse()">Analyse Tip</button>
 
     <div class="result" id="result"></div>
   </div>
 
   <script>
-    let mode = 'parse';
+    let pendingTip = null;  // stores tip text after parse, before confirm
 
-    function setMode(m) {
-      mode = m;
-      document.getElementById('btn-parse').classList.toggle('active', m === 'parse');
-      document.getElementById('btn-execute').classList.toggle('active', m === 'execute');
-      document.getElementById('submitBtn').textContent =
-        m === 'parse' ? 'Analyse Tip' : 'Analyse + Place Order';
+    function getQuantity() {
+      const v = parseInt(document.getElementById('quantity').value, 10);
+      return (v && v > 0) ? v : 1;
     }
 
     function fillExample(text) {
       document.getElementById('tipText').value = text;
-      document.getElementById('result').classList.remove('show');
+      resetResult();
     }
 
-    async function submit() {
+    function resetResult() {
+      pendingTip = null;
+      const resultEl = document.getElementById('result');
+      resultEl.classList.remove('show');
+      resultEl.innerHTML = '';
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = false;
+      btn.textContent = 'Analyse Tip';
+    }
+
+    async function analyse() {
       const tip = document.getElementById('tipText').value.trim();
       if (!tip) return;
 
@@ -352,69 +495,103 @@
       const resultEl = document.getElementById('result');
 
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>Processing...';
+      btn.innerHTML = '<span class="spinner"></span>Parsing...';
       resultEl.classList.remove('show');
 
-      const endpoint = mode === 'parse'
-        ? '/api/trade/parse-only'
-        : '/api/trade/parse-and-execute';
-
       try {
-        const res = await fetch(endpoint, {
+        const res = await fetch('/api/trade/parse-only', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tipText: tip })
+          body: JSON.stringify({ tipText: tip, quantity: getQuantity() }),
         });
-
         const data = await res.json();
-        resultEl.innerHTML = mode === 'parse'
-          ? renderParsed(data, tip)
-          : renderExecuted(data, res.ok);
-        resultEl.classList.add('show');
 
+        if (!res.ok) {
+          resultEl.innerHTML = `
+            <div class="result-header"><span class="badge error">Parse Failed</span></div>
+            <div class="error-box">${data.detail || 'Could not parse the tip.'}</div>`;
+        } else {
+          pendingTip = tip;
+          resultEl.innerHTML = renderConfirm(data);
+        }
+        resultEl.classList.add('show');
       } catch (e) {
         resultEl.innerHTML = `
           <div class="result-header"><span class="badge error">Error</span></div>
-          <div class="error-box">Could not reach the server. Is the app running?</div>`;
+          <div class="error-box">Could not reach the server.</div>`;
         resultEl.classList.add('show');
       } finally {
         btn.disabled = false;
-        btn.textContent = mode === 'parse' ? 'Analyse Tip' : 'Analyse + Place Order';
+        btn.textContent = 'Analyse Tip';
       }
     }
 
-    function renderParsed(t, rawTip) {
-      if (!t.symbol) {
-        return `
-          <div class="result-header"><span class="badge error">Parse Failed</span></div>
-          <div class="error-box">${t.errorMessage || 'Could not extract trade details from the tip.'}</div>`;
+    async function execute() {
+      if (!pendingTip) return;
+
+      const confirmBtn = document.getElementById('confirmBtn');
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<span class="spinner"></span>Placing order...';
+
+      try {
+        const res = await fetch('/api/trade/parse-and-execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipText: pendingTip, quantity: getQuantity() }),
+        });
+        const data = await res.json();
+        const resultEl = document.getElementById('result');
+
+        if (!res.ok || !data.success) {
+          resultEl.innerHTML = `
+            <div class="result-header"><span class="badge error">${data.orderStatus || 'Failed'}</span></div>
+            <div class="error-box">${data.detail || data.errorMessage || 'Order placement failed.'}</div>
+            ${data.parsedTrade ? tradeGrid(data.parsedTrade) : ''}
+            <div class="confirm-row">
+              <button class="cancel-btn" onclick="resetResult()">Dismiss</button>
+            </div>`;
+        } else {
+          resultEl.innerHTML = `
+            <div class="result-header"><span class="badge success">Order Placed</span></div>
+            ${tradeGrid(data.parsedTrade)}
+            <div class="order-result">
+              Order ID: <span>${data.orderId}</span> &nbsp;·&nbsp; Status: <span>${data.orderStatus}</span>
+              ${data.gttId ? `&nbsp;·&nbsp; GTT OCO: <span>${data.gttId}</span>` : ''}
+            </div>
+            <div class="raw-tip">Tip: "${data.parsedTrade?.rawTip || ''}"</div>
+            <div class="confirm-row">
+              <button class="cancel-btn" onclick="resetResult()">Done</button>
+            </div>`;
+          pendingTip = null;
+        }
+      } catch (e) {
+        document.getElementById('confirmBtn').disabled = false;
+        document.getElementById('confirmBtn').textContent = 'Confirm & Place Order';
       }
+    }
+
+    function renderConfirm(t) {
+      const productColor = t.product === 'CNC' ? '#a78bfa' : '#60a5fa';
+      const gttNote = t.product === 'CNC' && t.stopLossPrice && t.targetPrice
+        ? `<div style="margin-top:10px;padding:10px 14px;background:#1a1f35;border:1px solid #3b3f6e;border-radius:8px;font-size:12px;color:#a78bfa">
+             GTT OCO will also be placed — exits automatically at SL or target.
+           </div>`
+        : '';
       return `
-        <div class="result-header"><span class="badge parsed">Parsed</span></div>
+        <div class="result-header"><span class="badge parsed">Review Trade</span></div>
         ${tradeGrid(t)}
-        <div class="raw-tip">Tip: "${rawTip}"</div>`;
-    }
-
-    function renderExecuted(data, ok) {
-      if (!ok || !data.success) {
-        return `
-          <div class="result-header"><span class="badge error">${data.orderStatus || 'Failed'}</span></div>
-          <div class="error-box">${data.errorMessage || 'Unknown error'}</div>
-          ${data.parsedTrade ? tradeGrid(data.parsedTrade) : ''}`;
-      }
-      return `
-        <div class="result-header"><span class="badge success">Order Placed</span></div>
-        ${tradeGrid(data.parsedTrade)}
-        <div class="order-result">
-          Order ID: <span>${data.orderId}</span> &nbsp;·&nbsp;
-          Status: <span>${data.orderStatus}</span>
-        </div>
-        <div class="raw-tip">Tip: "${data.parsedTrade?.rawTip || ''}"</div>`;
+        ${gttNote}
+        <div class="raw-tip">Tip: "${t.rawTip || ''}"</div>
+        <div class="confirm-row">
+          <button class="confirm-btn" id="confirmBtn" onclick="execute()">Confirm &amp; Place Order</button>
+          <button class="cancel-btn" onclick="resetResult()">Cancel</button>
+        </div>`;
     }
 
     function tradeGrid(t) {
       const actionClass = t.action === 'BUY' ? 'buy' : 'sell';
-      const fmt = v => v != null ? v.toLocaleString('en-IN') : '—';
+      const fmt = v => v != null ? Number(v).toLocaleString('en-IN') : '—';
+      const productColor = t.product === 'CNC' ? '#a78bfa' : '#60a5fa';
       return `
         <div class="trade-grid">
           <div class="trade-item">
@@ -441,11 +618,15 @@
             <div class="t-label">Qty · Order · Exchange</div>
             <div class="t-value" style="font-size:13px">${t.quantity || '—'} · ${t.orderType || '—'} · ${t.exchange || '—'}</div>
           </div>
+          <div class="trade-item">
+            <div class="t-label">Product</div>
+            <div class="t-value" style="font-size:13px;color:${productColor}">${t.product || 'MIS'}</div>
+          </div>
         </div>`;
     }
 
     document.getElementById('tipText').addEventListener('keydown', e => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') analyse();
     });
 
     async function checkAuthStatus() {
@@ -458,21 +639,34 @@
 
         if (data.tokenSet) {
           dot.className  = 'auth-dot green';
-          const time = data.tokenSetAt ? data.tokenSetAt.substring(11, 16) : '';
+          const time = data.tokenSetAt || '';
           text.innerHTML = `Zerodha connected &nbsp;·&nbsp; <span>Token set at ${time}</span> — valid till midnight`;
-          btn.textContent = 'Re-login';
+          btn.textContent = 'Reconnect Zerodha';
+          fetchBalance();
         } else {
           dot.className  = 'auth-dot red';
-          text.innerHTML = 'Not authenticated &nbsp;·&nbsp; Login to enable order placement';
-          btn.textContent = 'Login with Zerodha';
+          text.innerHTML = 'Zerodha not connected &nbsp;·&nbsp; Login to enable order placement';
+          btn.textContent = 'Connect Zerodha';
+          document.getElementById('balanceBar').style.display = 'none';
         }
       } catch (_) {
         document.getElementById('authText').textContent = 'Could not reach server';
       }
     }
 
+    async function fetchBalance() {
+      try {
+        const res = await fetch('/api/balance');
+        if (!res.ok) return;
+        const data = await res.json();
+        const fmt = v => '₹' + Number(v).toLocaleString('en-IN', {maximumFractionDigits: 2});
+        document.getElementById('balAvailable').textContent = fmt(data.available);
+        document.getElementById('balUsed').textContent      = fmt(data.used);
+        document.getElementById('balanceBar').style.display = 'flex';
+      } catch (_) {}
+    }
+
     checkAuthStatus();
-    // Recheck every 60 seconds in case user logs in from another tab
     setInterval(checkAuthStatus, 60000);
   </script>
 </body>

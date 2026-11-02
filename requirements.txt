@@ -3,3 +3,6 @@ uvicorn
 kiteconnect
 requests
 python-dotenv
+bcrypt
+itsdangerous
+python-multipart

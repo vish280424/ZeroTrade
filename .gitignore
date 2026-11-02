@@ -1,6 +1,10 @@
 # Secrets — never commit real credentials
+.env
 .env.local
 .env.*.local
+
+# User credentials — never commit
+users.json
 
 # Python
 __pycache__/
