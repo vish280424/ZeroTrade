@@ -1,7 +1,6 @@
 # Secrets — never commit real credentials
-.env
-.env.local
-.env.*.local
+*.env
+!.env.example
 
 # User credentials — never commit
 users.json
