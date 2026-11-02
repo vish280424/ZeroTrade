@@ -60,7 +60,7 @@ After=network.target
 [Service]
 User=ubuntu
 WorkingDirectory=$APP_DIR
-ExecStart=$APP_DIR/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8080
+ExecStart=$APP_DIR/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
