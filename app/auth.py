@@ -1,6 +1,8 @@
 import logging
 import bcrypt
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
+from typing import Optional
 from fastapi import HTTPException, Request, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
@@ -15,6 +17,33 @@ COOKIE_NAME     = "zt_session"
 SESSION_MAX_AGE = 12 * 3600
 
 _signer = URLSafeTimedSerializer(SECRET_KEY)
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+_MAX_ATTEMPTS  = 5
+_LOCKOUT_MINS  = 15
+# { ip: {"count": int, "locked_until": datetime | None} }
+_login_attempts: dict = defaultdict(lambda: {"count": 0, "locked_until": None})
+
+def _check_rate_limit(ip: str) -> Optional[str]:
+    """Returns an error message if the IP is rate-limited, else None."""
+    record = _login_attempts[ip]
+    if record["locked_until"] and datetime.now() < record["locked_until"]:
+        remaining = int((record["locked_until"] - datetime.now()).total_seconds() / 60) + 1
+        return f"Too many failed attempts. Try again in {remaining} minute(s)."
+    if record["locked_until"] and datetime.now() >= record["locked_until"]:
+        # Lockout expired — reset
+        _login_attempts[ip] = {"count": 0, "locked_until": None}
+    return None
+
+def _record_failure(ip: str):
+    record = _login_attempts[ip]
+    record["count"] += 1
+    if record["count"] >= _MAX_ATTEMPTS:
+        record["locked_until"] = datetime.now() + timedelta(minutes=_LOCKOUT_MINS)
+        logger.warning(f"Login locked for IP {ip} after {_MAX_ATTEMPTS} failed attempts.")
+
+def _record_success(ip: str):
+    _login_attempts[ip] = {"count": 0, "locked_until": None}
 
 
 def make_session() -> str:
@@ -84,17 +113,33 @@ def login_page(error: str = "") -> HTMLResponse:
 </html>""")
 
 
-def login_submit(username: str, password: str) -> RedirectResponse:
+def login_submit(request: Request, username: str, password: str) -> RedirectResponse:
+    ip = request.client.host
+
+    # Check rate limit first
+    err = _check_rate_limit(ip)
+    if err:
+        return RedirectResponse(f"/login?error={err.replace(' ', '+')}", status_code=303)
+
     if not APP_PASSWORD_HASH:
         return RedirectResponse(
             "/login?error=APP_PASSWORD_HASH+not+set.+Run+setup_password.py",
             status_code=303,
         )
+
     valid = (username == APP_USERNAME
              and bcrypt.checkpw(password.encode(), APP_PASSWORD_HASH.encode()))
     if not valid:
-        return RedirectResponse("/login?error=Invalid+username+or+password", status_code=303)
+        _record_failure(ip)
+        record = _login_attempts[ip]
+        remaining = _MAX_ATTEMPTS - record["count"]
+        if remaining > 0:
+            msg = f"Invalid+username+or+password.+{remaining}+attempt(s)+remaining."
+        else:
+            msg = f"Too+many+failed+attempts.+Try+again+in+{_LOCKOUT_MINS}+minutes."
+        return RedirectResponse(f"/login?error={msg}", status_code=303)
 
+    _record_success(ip)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(COOKIE_NAME, make_session(), httponly=True, samesite="lax", max_age=SESSION_MAX_AGE)
     return resp

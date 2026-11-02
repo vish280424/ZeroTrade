@@ -46,8 +46,8 @@ def get_login(error: str = ""):
     return login_page(error)
 
 @app.post("/login")
-def post_login(username: str = Form(...), password: str = Form(...)):
-    return login_submit(username, password)
+def post_login(request: Request, username: str = Form(...), password: str = Form(...)):
+    return login_submit(request, username, password)
 
 @app.get("/logout")
 def get_logout():
