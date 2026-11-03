@@ -136,8 +136,10 @@ def parse_tip(tip_text: str, quantity_override: Optional[int] = None) -> dict:
         raise HTTPException(status_code=400, detail="Could not extract a trading symbol from the tip.")
 
     # ── Entry price ───────────────────────────────────────────────────────────
-    entry_match = re.search(rf"\b(?:above|below|at|cmp)\s+({_NUM})", text, re.IGNORECASE)
-    entry_price = _to_float(entry_match.group(1)) if entry_match else None
+    # Capture both the keyword and the price to know intent
+    entry_match = re.search(rf"\b(above|below|at|cmp)\s+({_NUM})", text, re.IGNORECASE)
+    entry_price   = _to_float(entry_match.group(2)) if entry_match else None
+    entry_keyword = entry_match.group(1).lower() if entry_match else None
 
     # ── Stop loss ─────────────────────────────────────────────────────────────
     sl_match = re.search(rf"\b(?:sl|stoploss|stop[-\s]?loss)\s*[:\-]?\s*({_NUM})", text, re.IGNORECASE)
@@ -176,7 +178,9 @@ def parse_tip(tip_text: str, quantity_override: Optional[int] = None) -> dict:
         product = "MIS"
 
     # ── Order type ────────────────────────────────────────────────────────────
-    if entry_price and sl_price:
+    # "above/below" = breakout → SL entry order (waits for price to reach entry)
+    # "at/cmp" = buy now → LIMIT entry order (SL only goes into GTT for CNC)
+    if entry_keyword in ("above", "below") and entry_price and sl_price:
         order_type = "SL"
     elif entry_price:
         order_type = "LIMIT"
@@ -188,6 +192,7 @@ def parse_tip(tip_text: str, quantity_override: Optional[int] = None) -> dict:
         "action":        action,
         "exchange":      exchange,
         "entryPrice":    entry_price,
+        "entryKeyword":  entry_keyword,
         "stopLossPrice": sl_price,
         "targetPrice":   tgt_price,
         "target2Price":  t2_price,
