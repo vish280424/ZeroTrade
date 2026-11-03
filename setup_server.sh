@@ -5,7 +5,7 @@
 
 set -e
 
-REPO_URL="https://github.com/I341519/ZeroTrade.git"  # update if different
+REPO_URL="https://github.com/vish280424/ZeroTrade.git"
 APP_DIR="/home/ubuntu/ZeroTrade"
 PYTHON="python3"
 

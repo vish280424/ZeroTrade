@@ -141,6 +141,15 @@ def parse_tip(tip_text: str, quantity_override: Optional[int] = None) -> dict:
     entry_price   = _to_float(entry_match.group(2)) if entry_match else None
     entry_keyword = entry_match.group(1).lower() if entry_match else None
 
+    # Fallback: bare number right after symbol (e.g. "SELL INFY 1800 SL 1820")
+    if entry_price is None and symbol:
+        bare_match = re.search(
+            rf"\b{re.escape(symbol)}\s+({_NUM})\b", upper
+        )
+        if bare_match:
+            entry_price   = _to_float(bare_match.group(1))
+            entry_keyword = "at"  # treat as limit
+
     # ── Stop loss ─────────────────────────────────────────────────────────────
     sl_match = re.search(rf"\b(?:sl|stoploss|stop[-\s]?loss)\s*[:\-]?\s*({_NUM})", text, re.IGNORECASE)
     sl_price = _to_float(sl_match.group(1)) if sl_match else None
@@ -156,11 +165,12 @@ def parse_tip(tip_text: str, quantity_override: Optional[int] = None) -> dict:
     qty_match = re.search(
         rf"\b(?:qty|quantity)\s*[:\-]?\s*(\d+)"
         rf"|\b(\d+)\s+(?:shares?|lots?)\b"
-        rf"|\b(?:shares?|lots?)\s*[:\-]?\s*(\d+)",
+        rf"|\b(?:shares?|lots?)\s*[:\-]?\s*(\d+)"
+        rf"|\b(?:buy|sell|short|long)\s+(\d+)\s+[A-Z]",  # BUY 10 TCS
         text, re.IGNORECASE,
     )
     if qty_match:
-        raw = qty_match.group(1) or qty_match.group(2) or qty_match.group(3)
+        raw = qty_match.group(1) or qty_match.group(2) or qty_match.group(3) or qty_match.group(4)
         parsed_qty = int(raw)
     else:
         parsed_qty = DEFAULT_QUANTITY
@@ -169,10 +179,10 @@ def parse_tip(tip_text: str, quantity_override: Optional[int] = None) -> dict:
     # ── Exchange ──────────────────────────────────────────────────────────────
     exchange = "BSE" if re.search(r"\bBSE\b", upper) else DEFAULT_EXCHANGE
 
-    # ── Product — "intraday" overrides days/weeks ─────────────────────────────
+    # ── Product — "intraday" overrides everything; "short/long term" → CNC ───
     if re.search(r"\bintraday\b", text, re.IGNORECASE):
         product = "MIS"
-    elif re.search(r"\b(swing|delivery|cnc|positional|hold|days|weeks)\b", text, re.IGNORECASE):
+    elif re.search(r"\b(swing|delivery|cnc|positional|hold|days|weeks|term)\b", text, re.IGNORECASE):
         product = "CNC"
     else:
         product = "MIS"
